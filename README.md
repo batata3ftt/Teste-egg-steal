@@ -31522,8 +31522,6 @@ end
 
 -- ============================================================
 -- BABIS UI + SENA HUB — integração completa (5 abas)
--- Cole isto DEPOIS do runtime do Sena.
--- No Sena, troque a última linha "v4315()" por "-- v4315()"
 -- ============================================================
 
 local Players           = game:GetService("Players")
@@ -31571,9 +31569,10 @@ for _, n in ipairs({"BabisUIKit","BabisUIKitNotif","BabisIntro"}) do
 end
 
 local CONFIG = {
-    appName = "Babis | SENA HUB",
+    appName = "Babis",
+    gameName = "Steal An Egg",
     version = "v2.0.0",
-    edition = "Steal An Egg Edition",
+    edition = "Premium Version",
     discordInvite = "https://discord.gg/senahub",
     colors = {
         windowBg=Color3.fromRGB(8,10,14), headerTint=Color3.fromRGB(8,10,14), divider=Color3.fromRGB(65,150,245),
@@ -31586,31 +31585,31 @@ local CONFIG = {
         textPrimary=Color3.fromRGB(240,240,248), textDesc=Color3.fromRGB(150,148,168), textMuted=Color3.fromRGB(130,130,150),
         closeHover=Color3.fromRGB(220,70,90), handIdle=Color3.fromRGB(240,245,255), handHover=Color3.fromRGB(255,255,255),
         cfgIcon=Color3.fromRGB(170,120,255), cfgBtnBg=Color3.fromRGB(24,24,28), cfgBtnBorder=Color3.fromRGB(48,48,56),
-        bellBg=Color3.fromRGB(30,38,48),
+        bellBg=Color3.fromRGB(30,38,48), white=Color3.fromRGB(255,255,255),
     },
     sizes = {
         windowWidth=470, windowHeight=720, windowRadius=22, headerHeight=82,
-        navHeight=78, navBtnSize=60, navBtnRadius=14, navGap=6, navPadX=12,
-        contentPadX=14, scrollPadL=6, scrollPadR=8, iconSize=40,
+        navHeight=96, navBtnSize=78, navBtnRadius=18, navGap=8, navPadX=12,
+        contentPadX=14, scrollPadL=6, scrollPadR=8, iconSize=48,
         cardRadius=16, cardPadX=16, cardGap=12,
         toggleCardHeight=140, sliderCardHeight=160, inputCardHeight=148, dropdownCardHeight=160,
         toggleW=72, toggleH=38, toggleKnob=30, toggleRight=22,
         controlW=110, controlH=44, controlRight=22, handIconSize=82, handIconY=20,
         cfgHeight=516,
     },
-    fonts = { appName=Enum.Font.GothamBold, version=Enum.Font.Gotham, intro=Enum.Font.Code },
+    fonts = { appName=Enum.Font.GothamBold, game=Enum.Font.GothamBold, version=Enum.Font.Gotham, intro=Enum.Font.Code },
     textSizes = {
-        appName=22, version=15, intro=20, cardTitle=20, cardDesc=14,
+        appName=22, gameName=20, version=15, intro=20, cardTitle=20, cardDesc=14,
         cfgTitle=22, cfgLabel=17, cfgBtn=17, cfgHint=16, cfgInput=17,
         aboutTitle=30, aboutDesc=16, discordTitle=28, discordSub=18,
     },
     anim = { fast=0.14, normal=0.20, slow=0.32, easing=Enum.EasingStyle.Quint, dir=Enum.EasingDirection.Out },
     tabs = {
-        { id="main",     name="Main",     iconId=7733960981,     boost=6 },
-        { id="auto",     name="Auto",     iconId=7733774602,     boost=0 },
-        { id="events",   name="Events",   iconId=10723387563,    boost=0 },
-        { id="player",   name="Player",   iconId=92187976272467, boost=46 },
-        { id="misc",     name="Misc",     iconId=7734053495,     boost=0 },
+        { id="main",   name="Main",   iconId=7733960981,     boost=6 },
+        { id="auto",   name="Auto",   iconId=7733774602,     boost=0 },
+        { id="events", name="Events", iconId=10723387563,    boost=0 },
+        { id="player", name="Player", iconId=92187976272467, boost=46 },
+        { id="misc",   name="Misc",   iconId=7734053495,     boost=0 },
     },
     defaultTab = "main",
     handIconId="rbxassetid://88060480140568", cfgIconId="rbxassetid://10709791036",
@@ -31876,7 +31875,7 @@ local function showIntro(onComplete)
 end
 
 -- ============================================================
--- UI BUILDER — 5 abas (Main / Auto / Events / Player / Misc)
+-- UI BUILDER — 5 abas
 -- ============================================================
 
 local function buildMainUI()
@@ -31956,13 +31955,19 @@ local function buildMainUI()
     headerFlat.BorderSizePixel=0; headerFlat.Parent=header
     protectInstance(headerFlat)
 
+    -- Header linha 1: "Babis" (azul) + "Steal An Egg" (branco) via RichText
     local appLabel = Instance.new("TextLabel")
-    appLabel.BackgroundTransparency=1; appLabel.Text=CONFIG.appName
-    appLabel.TextColor3=CONFIG.colors.accent; appLabel.Font=CONFIG.fonts.appName
-    appLabel.TextSize=CONFIG.textSizes.appName; appLabel.TextXAlignment=Enum.TextXAlignment.Left
-    appLabel.Size=UDim2.new(0,400,0,34); appLabel.Position=UDim2.new(0,22,0,8)
+    appLabel.BackgroundTransparency=1
+    appLabel.RichText = true
+    appLabel.Text=string.format('<font color="#5AA5FF">%s</font>  <font color="#FFFFFF">%s</font>', CONFIG.appName, CONFIG.gameName)
+    appLabel.TextColor3=CONFIG.colors.textPrimary
+    appLabel.Font=CONFIG.fonts.appName
+    appLabel.TextSize=CONFIG.textSizes.appName
+    appLabel.TextXAlignment=Enum.TextXAlignment.Left
+    appLabel.Size=UDim2.new(0,420,0,34); appLabel.Position=UDim2.new(0,22,0,8)
     appLabel.Parent=header
 
+    -- Header linha 2: "Premium Version" em ouro
     local subtitleLabel = Instance.new("TextLabel")
     subtitleLabel.BackgroundTransparency=1; subtitleLabel.Text=CONFIG.edition
     subtitleLabel.TextColor3=CONFIG.colors.gold; subtitleLabel.Font=Enum.Font.GothamBold
@@ -31970,6 +31975,7 @@ local function buildMainUI()
     subtitleLabel.Size=UDim2.new(0,220,0,18); subtitleLabel.Position=UDim2.new(0,24,0,42)
     subtitleLabel.Parent=header
 
+    -- Header linha 3: versão
     local versionLabel = Instance.new("TextLabel")
     versionLabel.BackgroundTransparency=1; versionLabel.Text=CONFIG.version
     versionLabel.TextColor3=CONFIG.colors.textMuted; versionLabel.Font=CONFIG.fonts.version
@@ -32931,7 +32937,6 @@ local function buildMainUI()
             screenGui:Destroy()
         end)
 
-        -- Keybind + Config agora no fim da Misc
         buildKeybindCard()
         buildConfigCard()
     end
