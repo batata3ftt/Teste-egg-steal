@@ -31521,7 +31521,8 @@ Missing: %s]], __SenaV4ScrambleTradeIn.banner, __SenaV4ScrambleTradeIn.status, m
 end
 
 -- ============================================================
--- BABIS UI + SENA HUB — integração completa (5 abas)
+-- Babis UI — Steal An Egg (5 abas)
+-- Cole isto DEPOIS do runtime.
 -- ============================================================
 
 local Players           = game:GetService("Players")
@@ -31597,9 +31598,9 @@ local CONFIG = {
         controlW=110, controlH=44, controlRight=22, handIconSize=82, handIconY=20,
         cfgHeight=516,
     },
-    fonts = { appName=Enum.Font.GothamBold, game=Enum.Font.GothamBold, version=Enum.Font.Gotham, intro=Enum.Font.Code },
+    fonts = { appName=Enum.Font.GothamBold, version=Enum.Font.Gotham, intro=Enum.Font.Code },
     textSizes = {
-        appName=22, gameName=20, version=15, intro=20, cardTitle=20, cardDesc=14,
+        appName=22, version=15, intro=20, cardTitle=20, cardDesc=14,
         cfgTitle=22, cfgLabel=17, cfgBtn=17, cfgHint=16, cfgInput=17,
         aboutTitle=30, aboutDesc=16, discordTitle=28, discordSub=18,
     },
@@ -31616,7 +31617,7 @@ local CONFIG = {
     infoIconId="rbxassetid://7733964719", discordIconId="rbxassetid://100770414662869",
     bellIconId="rbxassetid://7072706001", notifySoundId="rbxassetid://5153734608",
     notifySoundVol=0.5, introImageId="rbxassetid://119251117614023",
-    introDuration=4.0, introImgW=156, introImgH=139,
+    introDuration=5.5, introImgW=156, introImgH=139,
     cfgFolder="Babis/configs", cfgExt=".json", autoloadFile="Babis/autoload.txt",
     positionFile="Babis/position.txt",
 }
@@ -31718,7 +31719,7 @@ local SenaLibOverride = {
     Notify = function(self, opts)
         opts = opts or {}
         if _babisNotifyRef then
-            _babisNotifyRef(opts.Title or "Sena Hub", opts.Content or "", opts.Duration or 2.5)
+            _babisNotifyRef(opts.Title or "Babis", opts.Content or "", opts.Duration or 2.5)
         end
     end,
 }
@@ -31817,6 +31818,9 @@ local function createNotifier()
     return notify
 end
 
+-- ============================================================
+-- INTRO (igual do Babis original)
+-- ============================================================
 local function showIntro(onComplete)
     local introGui = Instance.new("ScreenGui")
     introGui.Name="BabisIntro"; introGui.ResetOnSpawn=false; introGui.IgnoreGuiInset=true
@@ -31833,6 +31837,11 @@ local function showIntro(onComplete)
     glow.Size=UDim2.new(0,220,0,220); glow.Position=UDim2.new(0.5,0,0.5,0)
     glow.AnchorPoint=Vector2.new(0.5,0.5); glow.BackgroundColor3=CONFIG.colors.accent
     glow.BackgroundTransparency=1; glow.BorderSizePixel=0; glow.Parent=center; corner(glow,110)
+    local glowRing = Instance.new("Frame")
+    glowRing.Size=UDim2.new(0,260,0,260); glowRing.Position=UDim2.new(0.5,0,0.5,0)
+    glowRing.AnchorPoint=Vector2.new(0.5,0.5); glowRing.BackgroundTransparency=1
+    glowRing.Parent=center; corner(glowRing,130)
+    local ringStroke = stroke(glowRing, CONFIG.colors.accent, 1, 1)
     local image = Instance.new("ImageLabel")
     image.Size=UDim2.new(0,CONFIG.introImgW,0,CONFIG.introImgH)
     image.Position=UDim2.new(0.5,0,0.5,0); image.AnchorPoint=Vector2.new(0.5,0.5)
@@ -31845,10 +31854,17 @@ local function showIntro(onComplete)
     subtitle.TextTransparency=1; subtitle.Font=CONFIG.fonts.intro
     subtitle.TextSize=CONFIG.textSizes.intro; subtitle.TextXAlignment=Enum.TextXAlignment.Center
     subtitle.Parent=overlay
+    local line = Instance.new("Frame")
+    line.Size=UDim2.new(0,0,0,1); line.Position=UDim2.new(0.5,0,0.5,158)
+    line.AnchorPoint=Vector2.new(0.5,0); line.BackgroundColor3=CONFIG.colors.accent
+    line.BackgroundTransparency=1; line.BorderSizePixel=0; line.Parent=overlay
     tween(overlay, {BackgroundTransparency=0.55}, 0.5)
     tween(image, {ImageTransparency=0}, 0.5)
     tween(glow, {BackgroundTransparency=0.88}, 0.6)
+    tween(ringStroke, {Transparency=0.6}, 0.6)
     tween(subtitle, {TextTransparency=0}, 0.5)
+    tween(line, {BackgroundTransparency=0.2}, 0.5)
+    tween(line, {Size=UDim2.new(0,190,0,1)}, 0.7)
     local spinning = true
     task.spawn(function()
         while spinning do
@@ -31860,14 +31876,30 @@ local function showIntro(onComplete)
     end)
     task.spawn(function()
         local base="CONNECTING TO SERVER"; local n=0
-        while spinning do n=(n+1)%4; subtitle.Text=base..string.rep(".",n); task.wait(0.35) end
+        while spinning do
+            n=(n+1)%4; subtitle.Text=base..string.rep(".",n); task.wait(0.35)
+        end
+    end)
+    task.spawn(function()
+        while spinning do
+            tween(glow, {BackgroundTransparency=0.95}, 0.9)
+            tween(ringStroke, {Transparency=0.9}, 0.9)
+            task.wait(0.9)
+            if not spinning then break end
+            tween(glow, {BackgroundTransparency=0.82}, 0.9)
+            tween(ringStroke, {Transparency=0.4}, 0.9)
+            task.wait(0.9)
+        end
     end)
     task.delay(CONFIG.introDuration, function()
         spinning = false
         tween(overlay, {BackgroundTransparency=1}, 0.55)
         tween(image, {ImageTransparency=1}, 0.5)
         tween(glow, {BackgroundTransparency=1}, 0.5)
+        tween(ringStroke, {Transparency=1}, 0.5)
         tween(subtitle, {TextTransparency=1}, 0.4)
+        tween(line, {BackgroundTransparency=1}, 0.4)
+        tween(line, {Size=UDim2.new(0,0,0,1)}, 0.5)
         task.wait(0.6)
         introGui:Destroy()
         if onComplete then onComplete() end
@@ -31875,9 +31907,8 @@ local function showIntro(onComplete)
 end
 
 -- ============================================================
--- UI BUILDER — 5 abas
+-- UI BUILDER
 -- ============================================================
-
 local function buildMainUI()
     local notify = createNotifier()
     _babisNotifyRef = notify
@@ -31955,7 +31986,6 @@ local function buildMainUI()
     headerFlat.BorderSizePixel=0; headerFlat.Parent=header
     protectInstance(headerFlat)
 
-    -- Header linha 1: "Babis" (azul) + "Steal An Egg" (branco) via RichText
     local appLabel = Instance.new("TextLabel")
     appLabel.BackgroundTransparency=1
     appLabel.RichText = true
@@ -31967,7 +31997,6 @@ local function buildMainUI()
     appLabel.Size=UDim2.new(0,420,0,34); appLabel.Position=UDim2.new(0,22,0,8)
     appLabel.Parent=header
 
-    -- Header linha 2: "Premium Version" em ouro
     local subtitleLabel = Instance.new("TextLabel")
     subtitleLabel.BackgroundTransparency=1; subtitleLabel.Text=CONFIG.edition
     subtitleLabel.TextColor3=CONFIG.colors.gold; subtitleLabel.Font=Enum.Font.GothamBold
@@ -31975,7 +32004,6 @@ local function buildMainUI()
     subtitleLabel.Size=UDim2.new(0,220,0,18); subtitleLabel.Position=UDim2.new(0,24,0,42)
     subtitleLabel.Parent=header
 
-    -- Header linha 3: versão
     local versionLabel = Instance.new("TextLabel")
     versionLabel.BackgroundTransparency=1; versionLabel.Text=CONFIG.version
     versionLabel.TextColor3=CONFIG.colors.textMuted; versionLabel.Font=CONFIG.fonts.version
@@ -32084,7 +32112,7 @@ local function buildMainUI()
 
     local aboutDesc = Instance.new("TextLabel")
     aboutDesc.BackgroundTransparency=1
-    aboutDesc.Text = "Babis x SENA HUB\n\nSteal An Egg — full toolkit.\n\nAuto Steal, ESP, Auto Place/Hatch/Mutate, Favorite, Fusion, Auto Sell, Butterfly Bloom, Dr Scramble (shop + trade-in + boss), Steal Players, Auto Hop, Private Server Finder, Anti Guard, Webhook de roubo, Configs com autoload.\n\n• Main — Auto Steal, filtros, ESP, webhook\n• Auto — Place, Hatch, Mutation, Sell, Pet automation\n• Events — Butterfly Bloom, Dr Scramble, Boss\n• Player — Steal Players, movimento\n• Misc — Treadmill, Hop, Private, Performance, Config + keybind\n\nDiscord: discord.gg/senahub"
+    aboutDesc.Text = "Babis\n\nSteal An Egg — full toolkit.\n\nA single hub with every automation you need: auto steal with smart filters, live ESP, pet management, event runners, player hunting and a full config system.\n\n• Main — steal, filters, ESP, webhook\n• Auto — place, hatch, mutate, sell, fuse\n• Events — Butterflies, Dr Scramble, Ring\n• Player — steal from players, movement\n• Misc — treadmill, hop, private, performance, config\n\nDiscord: discord.gg/senahub"
     aboutDesc.TextColor3=CONFIG.colors.textPrimary; aboutDesc.Font=Enum.Font.Gotham
     aboutDesc.TextSize=CONFIG.textSizes.aboutDesc; aboutDesc.TextXAlignment=Enum.TextXAlignment.Left
     aboutDesc.TextYAlignment=Enum.TextYAlignment.Top; aboutDesc.TextWrapped=true
@@ -32513,7 +32541,7 @@ local function buildMainUI()
         title.Size=UDim2.new(1,-160,0,28); title.Position=UDim2.new(0,16,0,24)
         title.Parent=card
         local desc = Instance.new("TextLabel")
-        desc.BackgroundTransparency=1; desc.Text="Key to open/close the interface"
+        desc.BackgroundTransparency=1; desc.Text="Pick the key that opens and closes the menu."
         desc.TextColor3=CONFIG.colors.textDesc; desc.Font=Enum.Font.Gotham
         desc.TextSize=14; desc.TextXAlignment=Enum.TextXAlignment.Left
         desc.Size=UDim2.new(1,-160,0,22); desc.Position=UDim2.new(0,16,0,58)
@@ -32665,10 +32693,14 @@ local function buildMainUI()
         clearContent()
         local Egg = getgenv().__SenaV4EggRuntime
 
-        createToggleCard(1, "Auto Steal", "Rouba eggs que passam nos filtros e traz pra safe zone.", "auto_steal", false,
+        createToggleCard(1, "Auto Steal",
+            "Snatches matching eggs from the field and banks them at your base.",
+            "auto_steal", false,
             function(v) SenaCfg.AutoSteal = v; if Egg and Egg.setEnabled then pcall(Egg.setEnabled, Egg, v) end end)
 
-        createDropdownCard(2, "Steal Mode", "Fly = alta velocidade. Instant = low speed user.", "steal_mode",
+        createDropdownCard(2, "Steal Mode",
+            "Fly is fast but needs speed. Instant plays it safe for any account.",
+            "steal_mode",
             {"Fly", "Instant", "Zig-Zag"}, "Fly",
             function(v)
                 local m = v == "Instant" and "Instant" or "Fly"
@@ -32676,33 +32708,45 @@ local function buildMainUI()
                 if Egg and Egg.setStealMode then pcall(Egg.setStealMode, Egg, m, false, v == "Zig-Zag") end
             end)
 
-        createSliderCard(3, "Low Speed Multiplier", "1-10. Mais alto = mais rápido agarra.", "steal_hold", 1, 10, 5,
+        createSliderCard(3, "Low Speed Multiplier",
+            "Tightness of the grab in Instant mode. Higher = faster, lower = safer.",
+            "steal_hold", 1, 10, 5,
             function(v) SenaCfg.StealHoldSeconds = v end)
 
-        createToggleCard(4, "Help Friend", "Dropa o egg antes da linha segura pra um amigo pegar.", "help_friend", false,
+        createToggleCard(4, "Help Friend",
+            "Drops the egg just before the safe line so a friend can scoop it.",
+            "help_friend", false,
             function(v) SenaCfg.HelpFriend = v end)
 
-        createToggleCard(5, "Aura Bat (God Mode)", "Bate automaticamente em quem chega perto.", "god_mode", true,
+        createToggleCard(5, "Aura Bat",
+            "Swings at anyone who gets close while you're holding an egg.",
+            "god_mode", true,
             function(v)
                 SenaCfg.GodMode = v
                 local God = getgenv().__SenaV4GodMode
                 if God and God.setEnabled then pcall(God.setEnabled, God, v) end
             end)
 
-        createToggleCard(6, "Auto Index", "Também rouba eggs faltando no Pet Index.", "auto_index", false,
+        createToggleCard(6, "Auto Index",
+            "Also steals eggs you're still missing in your Pet Index.",
+            "auto_index", false,
             function(v)
                 SenaCfg.AutoIndex = v
                 if Egg and Egg.setIndexObjective then pcall(Egg.setIndexObjective, Egg, v) end
             end)
 
-        createToggleCard(7, "Anti Guard Knockback", "Cancela o knockback do guard da Forest.", "anti_guard_knock", true,
+        createToggleCard(7, "Anti Guard Knockback",
+            "Cancels the Forest Guard's shove so you never get thrown off track.",
+            "anti_guard_knock", true,
             function(v)
                 SenaCfg.AntiGuardKnockback = v
                 local AG = getgenv().__SenaV4AntiGuard
                 if AG and AG.setEnabled then pcall(AG.setEnabled, AG, v) end
             end)
 
-        createInputCard(8, "Filter By Value (min $/s)", "Valor mínimo em money/s. Aceita k/m/b.", "filter_value", "e.g. 500k", "",
+        createInputCard(8, "Filter By Value",
+            "Minimum money per second. Accepts k, m and b.",
+            "filter_value", "e.g. 500k", "",
             function(v)
                 local lower = string.lower(tostring(v or "")):gsub("[%s,]", "")
                 local num, sufix = string.match(lower, "^([%d]+%.?[%d]*)([kmb]?)$")
@@ -32714,14 +32758,18 @@ local function buildMainUI()
                 if Egg and Egg.setMinValuePerSec then pcall(Egg.setMinValuePerSec, Egg, n) end
             end)
 
-        createInputCard(9, "Filter By Weight (kg)", "Peso mínimo em kg. 0 = sem filtro.", "filter_weight", "e.g. 12000", "",
+        createInputCard(9, "Filter By Weight",
+            "Minimum weight in kilograms. 0 turns the filter off.",
+            "filter_weight", "e.g. 12000", "",
             function(v)
                 local n = tonumber(tostring(v or ""):gsub("[^%d%.]", "")) or 0
                 SenaCfg.StealMinWeight = n
                 if Egg and Egg.setMinWeightKg then pcall(Egg.setMinWeightKg, Egg, n) end
             end)
 
-        createDropdownCard(10, "Steal Priority", "Qual egg pegar primeiro.", "steal_priority",
+        createDropdownCard(10, "Steal Priority",
+            "Which egg to hunt first when several pass the filters.",
+            "steal_priority",
             {"Rarity", "Highest Value", "Heaviest"}, "Rarity",
             function(v)
                 SenaCfg.StealPriority = v
@@ -32731,95 +32779,155 @@ local function buildMainUI()
                 end
             end)
 
-        createToggleCard(11, "Egg ESP", "Marca cada egg do mapa com um label.", "egg_esp", false,
+        createToggleCard(11, "Egg ESP",
+            "Draws a clean label over every egg on the field.",
+            "egg_esp", false,
             function(v)
                 SenaCfg.EggESP = v
                 if Egg and Egg.setEggEsp then pcall(Egg.setEggEsp, Egg, v) end
             end)
 
-        createToggleCard(12, "Backpack Value/s", "Mostra rendimento/s dos eggs na mochila.", "backpack_rates", false,
+        createToggleCard(12, "Backpack Value/s",
+            "Shows the money per second of each egg in your bag.",
+            "backpack_rates", false,
             function(v)
                 SenaCfg.BackpackRateEsp = v
                 local Roam = getgenv().__SenaV4Roaming
                 if Roam and Roam.setBackpackRates then pcall(Roam.setBackpackRates, Roam, v) end
             end)
 
-        createToggleCard(13, "Steal Webhook", "Posta embed no Discord quando bankar egg.", "webhook_on", false,
+        createToggleCard(13, "Steal Webhook",
+            "Posts a Discord embed every time a stolen egg hits your base.",
+            "webhook_on", false,
             function(v) SenaCfg.WebhookEnabled = v end)
 
-        createInputCard(14, "Webhook URL", "URL do webhook.", "webhook_url", "https://discord.com/api/webhooks/...", "",
+        createInputCard(14, "Webhook URL",
+            "Paste your Discord webhook URL here.",
+            "webhook_url", "https://discord.com/api/webhooks/...", "",
             function(v) SenaCfg.WebhookURL = tostring(v or "") end)
 
-        createButtonCard(15, "Test Webhook", "Envia um embed de teste.", function()
-            local W = getgenv().__SenaV4Webhook
-            if W and W.test then pcall(W.test) end
-        end)
+        createButtonCard(15, "Test Webhook",
+            "Fires one sample embed so you know the URL works.",
+            function()
+                local W = getgenv().__SenaV4Webhook
+                if W and W.test then pcall(W.test) end
+            end)
     end
 
     local function buildAutoTab()
         clearContent()
-        createToggleCard(1, "Auto Place Egg", "Coloca eggs do inventário no plot.", "auto_place", false,
+        createToggleCard(1, "Auto Place Egg",
+            "Plants eggs from your inventory onto your plot.",
+            "auto_place", false,
             function(v) SenaCfg.AutoPlace = v end)
-        createToggleCard(2, "Auto Hatch Egg", "Choca eggs colocados quando prontos.", "auto_hatch", false,
+        createToggleCard(2, "Auto Hatch Egg",
+            "Hatches placed eggs the moment they're ready.",
+            "auto_hatch", false,
             function(v) SenaCfg.AutoHatch = v end)
-        createDropdownCard(3, "Auto Mutation Type", "Qual mutation aplicar.", "mutation_type",
+        createDropdownCard(3, "Mutation Type",
+            "Which mutation to use on your placed eggs.",
+            "mutation_type",
             {"Scrambled", "Fractured"}, "Scrambled",
             function(v) SenaCfg.MutationChoice = v end)
-        createToggleCard(4, "Auto Apply Mutation", "Aplica a mutation nos eggs colocados.", "auto_mutation", false,
+        createToggleCard(4, "Auto Apply Mutation",
+            "Cooks the chosen mutation onto your placed eggs.",
+            "auto_mutation", false,
             function(v) SenaCfg.AutoMutation = v end)
-        createToggleCard(5, "Retry Until Mutated", "Repete até mutar (10% por uso).", "mutation_retry", true,
+        createToggleCard(5, "Retry Until Mutated",
+            "Keeps retrying until it lands. About 10% per try.",
+            "mutation_retry", true,
             function(v) SenaCfg.MutationRetry = v end)
-        createToggleCard(6, "Auto Sell Pet", "Vende pets que passam no filtro.", "auto_sell_pet", false,
+        createToggleCard(6, "Auto Sell Pet",
+            "Sells any pet that matches your filters below.",
+            "auto_sell_pet", false,
             function(v) SenaCfg.AutoSell = v end)
-        createToggleCard(7, "Auto Sell Egg", "Vende eggs não colocados.", "auto_sell_egg", false,
+        createToggleCard(7, "Auto Sell Egg",
+            "Sells unplaced eggs of the rarities you pick.",
+            "auto_sell_egg", false,
             function(v) SenaCfg.AutoSellEgg = v end)
-        createToggleCard(8, "Auto Favorite", "Marca pets por regra como favoritos.", "auto_fav", false,
+        createToggleCard(8, "Auto Favorite",
+            "Stars every pet that matches your rule so nothing touches it.",
+            "auto_fav", false,
             function(v) SenaCfg.AutoFavorite = v end)
-        createToggleCard(9, "Auto Fuse", "Alimenta 3 pets por vez na máquina.", "auto_fuse", false,
+        createToggleCard(9, "Auto Fuse",
+            "Feeds three pets at a time into the Fusion machine.",
+            "auto_fuse", false,
             function(v) SenaCfg.AutoFusePets = v end)
-        createToggleCard(10, "Auto Equip Best", "Mantém os pets mais fortes equipados.", "auto_equip_best", false,
+        createToggleCard(10, "Auto Equip Best",
+            "Keeps your strongest pets equipped as better ones hatch.",
+            "auto_equip_best", false,
             function(v) SenaCfg.AutoEquipBest = v end)
-        createToggleCard(11, "Collect Offline Income", "Coleta dinheiro da base offline.", "auto_claim_offline", false,
+        createToggleCard(11, "Collect Offline Income",
+            "Claims base money that piled up while you were away.",
+            "auto_claim_offline", false,
             function(v) SenaCfg.AutoClaimOffline = v end)
-        createToggleCard(12, "Auto Upgrade Base", "Compra próximo tier da base.", "auto_base", false,
+        createToggleCard(12, "Auto Upgrade Base",
+            "Buys the next base tier the moment you can afford it.",
+            "auto_base", false,
             function(v) SenaCfg.AutoBaseUpgrade = v end)
-        createToggleCard(13, "Auto Claim Almanac", "Resgata recompensas do Pet Index.", "auto_almanac", false,
+        createToggleCard(13, "Auto Claim Almanac",
+            "Grabs every Pet Index reward that's ready.",
+            "auto_almanac", false,
             function(v) SenaCfg.AutoClaimAlmanac = v end)
     end
 
     local function buildEventsTab()
         clearContent()
-        createToggleCard(1, "Auto Claim Butterfly Net", "Pega tua net grátis.", "btf_net", false,
+        createToggleCard(1, "Auto Claim Butterfly Net",
+            "Walks into the tree and grabs your free net once.",
+            "btf_net", false,
             function(v) SenaCfg.ButterflyAutoNet = v end)
-        createToggleCard(2, "Auto Catch Butterflies", "Captura durante o Bloom.", "btf_catch", false,
+        createToggleCard(2, "Auto Catch Butterflies",
+            "Flies to the Bloom, equips the net and catches the whole event.",
+            "btf_catch", false,
             function(v) SenaCfg.ButterflyAutoCatch = v end)
-        createToggleCard(3, "Auto Trade Up", "Sobe butterflies na máquina.", "btf_trade", false,
+        createToggleCard(3, "Auto Trade Up",
+            "Runs the trade-up machine inside the tree after each Bloom.",
+            "btf_trade", false,
             function(v) SenaCfg.ButterflyAutoTrade = v end)
-        createToggleCard(4, "Auto Craft Essence", "Crafta Enchanted Essence no shrine.", "btf_craft", false,
+        createToggleCard(4, "Auto Craft Essence",
+            "Crafts Enchanted Essence the moment you have the recipe.",
+            "btf_craft", false,
             function(v) SenaCfg.ButterflyAutoCraft = v end)
-        createToggleCard(5, "Butterfly ESP", "Mostra tier e distância das butterflies.", "btf_esp", false,
+        createToggleCard(5, "Butterfly ESP",
+            "Shows the tier and distance of every butterfly during the Bloom.",
+            "btf_esp", false,
             function(v) SenaCfg.ButterflyEsp = v end)
-        createToggleCard(6, "Dr Scramble — Auto Buy Shop", "Gasta samples no shop.", "scramble_buy", false,
+        createToggleCard(6, "Dr Scramble - Buy Shop",
+            "Spends samples on the shop items you have listed.",
+            "scramble_buy", false,
             function(v) SenaCfg.ScrambleAutoBuy = v end)
-        createToggleCard(7, "Dr Scramble — Auto Trade-In", "Sacrifica pets pra trade-in.", "scramble_tradein", false,
+        createToggleCard(7, "Dr Scramble - Trade-In",
+            "Sacrifices the cheapest pet for each trade-in slot.",
+            "scramble_tradein", false,
             function(v) SenaCfg.ScrambleTradeInTrade = v end)
-        createToggleCard(8, "Dr Scramble — Auto Reroll", "Rerola receita quando falta pet.", "scramble_reroll", false,
+        createToggleCard(8, "Dr Scramble - Reroll",
+            "Rerolls the recipe when a free roll is left and pets are missing.",
+            "scramble_reroll", false,
             function(v) SenaCfg.ScrambleTradeInReroll = v end)
-        createToggleCard(9, "Dr Scramble — Auto Boss", "Entra na arena, luta, quebra grab.", "scramble_boss", false,
+        createToggleCard(9, "Dr Scramble - Boss",
+            "Enters the arena, fights the boss and breaks out of grabs.",
+            "scramble_boss", false,
             function(v) SenaCfg.ScrambleBossAuto = v end)
-        createToggleCard(10, "Auto Ring Event", "Safe → Forest → Angels/Demons → volta.", "ring_event", false,
+        createToggleCard(10, "Auto Ring Event",
+            "Loops the ring route: safe, Forest, Angels and back.",
+            "ring_event", false,
             function(v) SenaCfg.AutoRingEvent = v end)
     end
 
     local function buildPlayerTab()
         clearContent()
-        createToggleCard(1, "Steal From Players", "Persegue carriers, bate, pega, banka.", "steal_players", false,
+        createToggleCard(1, "Steal From Players",
+            "Chases carriers, bats the egg loose, grabs it and banks it.",
+            "steal_players", false,
             function(v)
                 SenaCfg.StealPlayers = v
                 local PS = getgenv().__SenaV4PlayerSteal
                 if PS and PS.setEnabled then pcall(PS.setEnabled, PS, v) end
             end)
-        createInputCard(2, "Min Value (Players)", "Ignora carriers com egg abaixo desse valor/s.", "steal_player_value", "e.g. 500k", "",
+        createInputCard(2, "Min Value (Players)",
+            "Skips carriers holding eggs below this value per second.",
+            "steal_player_value", "e.g. 500k", "",
             function(v)
                 local lower = string.lower(tostring(v or "")):gsub("[%s,]", "")
                 local num, sufix = string.match(lower, "^([%d]+%.?[%d]*)([kmb]?)$")
@@ -32829,113 +32937,161 @@ local function buildMainUI()
                 elseif sufix == "b" then n = n * 1e9 end
                 SenaCfg.StealPlayerMinValue = n
             end)
-        createToggleCard(3, "Fly For Capture", "Voa e fica parado no ar durante capture.", "fly_capture", false,
+        createToggleCard(3, "Fly For Capture",
+            "Hovers in the air while holding the Capture The Egg egg.",
+            "fly_capture", false,
             function(v)
                 SenaCfg.FlyForCapture = v
                 local M = getgenv().__SenaV4MovementExtras
                 if M and M.setFlyForCapture then pcall(M.setFlyForCapture, M, v) end
             end)
-        createToggleCard(4, "Auto Steal Capture", "Pega e segura o egg de capture.", "auto_capture", false,
+        createToggleCard(4, "Auto Steal Capture",
+            "Snags and holds the Capture event egg in a safe spot.",
+            "auto_capture", false,
             function(v) SenaCfg.AutoStealCapture = v end)
-        createToggleCard(5, "Instant Grab", "Pegar egg vira tap rápido.", "instant_grab", false,
+        createToggleCard(5, "Instant Grab",
+            "Turns egg pickups into a quick tap instead of a long hold.",
+            "instant_grab", false,
             function(v)
                 SenaCfg.InstantGrab = v
                 local M = getgenv().__SenaV4MovementExtras
                 if M and M.setInstantGrab then pcall(M.setInstantGrab, M, v) end
             end)
-        createToggleCard(6, "Infinite Jump", "Pula no ar quantas vezes quiser.", "inf_jump", false,
+        createToggleCard(6, "Infinite Jump",
+            "Jump again in mid-air as many times as you want.",
+            "inf_jump", false,
             function(v)
                 SenaCfg.InfiniteJump = v
                 local M = getgenv().__SenaV4MovementExtras
                 if M and M.setInfiniteJump then pcall(M.setInfiniteJump, M, v) end
             end)
-        createToggleCard(7, "Noclip", "Atravessa paredes.", "noclip", false,
+        createToggleCard(7, "Noclip",
+            "Walk through walls and doors.",
+            "noclip", false,
             function(v)
                 SenaCfg.Noclip = v
                 local R = getgenv().__SenaV4Roaming
                 if R and R.setNoclip then pcall(R.setNoclip, R, v) end
             end)
-        createToggleCard(8, "Anti Hit Guard", "Te prega na safe com clone até o guard dormir.", "anti_hit_guard", false,
+        createToggleCard(8, "Anti Hit Guard",
+            "Pins you in the safe zone with a decoy until the Guard sleeps.",
+            "anti_hit_guard", false,
             function(v)
                 SenaCfg.AntiHitGuard = v
                 local AH = getgenv().__SenaV4AntiHitGuard
                 if AH and AH.setEnabled then pcall(AH.setEnabled, AH, v) end
             end)
-        createToggleCard(9, "Admin Abuse Boost", "Só funciona durante Admin Abuse.", "admin_boost", false,
+        createToggleCard(9, "Admin Boost",
+            "Only works during Admin Abuse. Leave it off otherwise.",
+            "admin_boost", false,
             function(v) getgenv().__SenaV4AdminBoost = v end)
     end
 
     local function buildMiscTab()
         clearContent()
-        createToggleCard(1, "Anti Treadmill", "Nunca fica na treadmill.", "anti_treadmill", false,
+        createToggleCard(1, "Anti Treadmill",
+            "Never stays on a treadmill. Auto Treadmill pauses while this is on.",
+            "anti_treadmill", false,
             function(v)
                 SenaCfg.AntiTreadmill = v
                 local TM = getgenv().__SenaV4TreadmillManager
                 if v and TM and TM.setIdleFarm then pcall(TM.setIdleFarm, TM, false) end
             end)
-        createToggleCard(2, "Auto Treadmill", "Farma speed quando nada roda.", "auto_treadmill", false,
+        createToggleCard(2, "Auto Treadmill",
+            "Farms speed on your treadmill whenever nothing else is running.",
+            "auto_treadmill", false,
             function(v)
                 SenaCfg.AutoTreadmillIdle = v
                 local TM = getgenv().__SenaV4TreadmillManager
                 if TM and TM.setIdleFarm then pcall(TM.setIdleFarm, TM, v) end
             end)
-        createToggleCard(3, "Auto Upgrade Treadmill", "Compra próximo tier.", "treadmill_upg", false,
+        createToggleCard(3, "Auto Upgrade Treadmill",
+            "Buys the next treadmill tier with cash.",
+            "treadmill_upg", false,
             function(v)
                 SenaCfg.AutoTreadmillUpgrade = v
                 local TM = getgenv().__SenaV4TreadmillManager
                 if TM and TM.setAutoUpgrade then pcall(TM.setAutoUpgrade, TM, v) end
             end)
-        createToggleCard(4, "Hop When Nothing Matches", "Vai pro server mais vazio quando nada bate.", "hop_nomatch", false,
+        createToggleCard(4, "Hop When Nothing Matches",
+            "Hops to the emptiest server when no egg matches your filters.",
+            "hop_nomatch", false,
             function(v) SenaCfg.HopNoMatch = v end)
-        createSliderCard(5, "Hop Cooldown (s)", "Segundos entre hops.", "hop_cooldown", 1, 60, 5,
+        createSliderCard(5, "Hop Cooldown",
+            "Seconds to wait between hops.",
+            "hop_cooldown", 1, 60, 5,
             function(v) SenaCfg.HopCooldown = v end)
-        createDropdownCard(6, "Private Max Players", "Máximo de players no server.", "private_max",
+        createDropdownCard(6, "Private Max Players",
+            "Top player count you want in a server. 2 = you plus one more.",
+            "private_max",
             {"1","2","3","4","5"}, "2",
             function(v) SenaCfg.PrivateServerMax = v end)
-        createToggleCard(7, "Private Server Auto Hop", "Pula até achar server vazio.", "private_auto", false,
+        createToggleCard(7, "Private Server Auto Hop",
+            "Keeps hopping until the server is empty enough.",
+            "private_auto", false,
             function(v) SenaCfg.PrivateServerAuto = v end)
-        createToggleCard(8, "Anti AFK", "Bloqueia idle kick.", "anti_afk", true,
+        createToggleCard(8, "Anti AFK",
+            "Blocks the idle kick.",
+            "anti_afk", true,
             function(v) SenaCfg.AntiAFK = v end)
-        createToggleCard(9, "Auto Reconnect", "Reconecta em kick/disconnect.", "auto_reconnect", true,
+        createToggleCard(9, "Auto Reconnect",
+            "Rejoins the same server after a kick or disconnect.",
+            "auto_reconnect", true,
             function(v) SenaCfg.AutoReconnect = v end)
-        createToggleCard(10, "Auto Execute (Rejoin)", "Prepara bootstrapper.", "auto_exec", false,
+        createToggleCard(10, "Auto Execute",
+            "Sets up the bootstrapper so the script runs after teleports.",
+            "auto_exec", false,
             function(v) SenaCfg.AutoExecute = v end)
-        createToggleCard(11, "Startup Boost", "Baixa gráficos na inicialização.", "startup_boost", true,
+        createToggleCard(11, "Startup Boost",
+            "Lowers graphics when the script loads to keep things smooth.",
+            "startup_boost", true,
             function(v) SenaCfg.StartupBoost = v end)
-        createToggleCard(12, "Boost FPS", "Remove detalhes extras.", "boost_fps", false,
+        createToggleCard(12, "Boost FPS",
+            "Strips extra map details and other players' plots.",
+            "boost_fps", false,
             function(v) end)
-        createToggleCard(13, "Uncap FPS", "Sobe cap pra 240.", "uncap_fps", true,
+        createToggleCard(13, "Uncap FPS",
+            "Raises the FPS cap to 240.",
+            "uncap_fps", true,
             function(v)
                 local setCap = getgenv().__SenaV4SetCapFps
                 if type(setCap) == "function" then pcall(setCap, v and 240 or 60) end
             end)
-        createToggleCard(14, "Botting Mode", "Desliga render 3D.", "botting_mode", false,
+        createToggleCard(14, "Botting Mode",
+            "Turns off 3D rendering and covers the screen. Runs quietly in the dark.",
+            "botting_mode", false,
             function(v)
                 SenaCfg.BottingMode = v
                 local R = getgenv().__SenaV4Roaming
                 if R and R.setBottingMode then pcall(R.setBottingMode, R, v) end
             end)
-        createToggleCard(15, "Anti Cutscene", "Fecha cutscenes.", "anti_cutscene", false,
+        createToggleCard(15, "Anti Cutscene",
+            "Closes event cutscenes and the intro the moment they open.",
+            "anti_cutscene", false,
             function(v) SenaCfg.AntiCutscene = v end)
-        createButtonCard(16, "Rejoin This Server", "Teleporta pro mesmo server.", function()
-            pcall(function()
-                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        createButtonCard(16, "Rejoin This Server",
+            "Teleports you back into this exact server.",
+            function()
+                pcall(function()
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+                end)
             end)
-        end)
-        createButtonCard(17, "Stop & Unload", "Desliga tudo e fecha o hub.", function()
-            for _, k in ipairs({
-                "AutoSteal","AutoPlace","AutoHatch","AutoSell","AutoSellEgg",
-                "StealPlayers","AutoFavorite","AutoFusePets","AutoEquipBest",
-                "AutoClaimOffline","AutoBaseUpgrade","AutoClaimAlmanac","Noclip",
-                "BottingMode","AntiCutscene","AutoRingEvent","ButterflyAutoCatch",
-                "ButterflyAutoTrade","ButterflyAutoCraft","ScrambleBossAuto"
-            }) do SenaCfg[k] = false end
-            local Egg = getgenv().__SenaV4EggRuntime
-            if Egg and Egg.setEnabled then pcall(Egg.setEnabled, Egg, false) end
-            local Shutdown = getgenv().__SenaV4HubShutdown
-            if type(Shutdown) == "function" then task.delay(0.2, function() pcall(Shutdown) end) end
-            screenGui:Destroy()
-        end)
+        createButtonCard(17, "Stop & Unload",
+            "Turns everything off and closes the menu.",
+            function()
+                for _, k in ipairs({
+                    "AutoSteal","AutoPlace","AutoHatch","AutoSell","AutoSellEgg",
+                    "StealPlayers","AutoFavorite","AutoFusePets","AutoEquipBest",
+                    "AutoClaimOffline","AutoBaseUpgrade","AutoClaimAlmanac","Noclip",
+                    "BottingMode","AntiCutscene","AutoRingEvent","ButterflyAutoCatch",
+                    "ButterflyAutoTrade","ButterflyAutoCraft","ScrambleBossAuto"
+                }) do SenaCfg[k] = false end
+                local Egg = getgenv().__SenaV4EggRuntime
+                if Egg and Egg.setEnabled then pcall(Egg.setEnabled, Egg, false) end
+                local Shutdown = getgenv().__SenaV4HubShutdown
+                if type(Shutdown) == "function" then task.delay(0.2, function() pcall(Shutdown) end) end
+                screenGui:Destroy()
+            end)
 
         buildKeybindCard()
         buildConfigCard()
