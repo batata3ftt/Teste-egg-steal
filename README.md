@@ -1,4 +1,3 @@
--- discord.gg/syncrypt
 
 local function geniter(f, s, c)
 	if type(f) ~= "function" then
@@ -31521,6 +31520,365 @@ Missing: %s]], __SenaV4ScrambleTradeIn.banner, __SenaV4ScrambleTradeIn.status, m
 	-- v4315()
 end
 
+-- ============================================================
+-- BABIS UI + SENA HUB — integração completa (5 abas)
+-- Cole isto DEPOIS do runtime do Sena.
+-- No Sena, troque a última linha "v4315()" por "-- v4315()"
+-- ============================================================
+
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local TweenService      = game:GetService("TweenService")
+local UserInputService  = game:GetService("UserInputService")
+local SoundService      = game:GetService("SoundService")
+local HttpService       = game:GetService("HttpService")
+local Workspace         = game:GetService("Workspace")
+local LocalPlayer       = Players.LocalPlayer
+local PlayerGui         = LocalPlayer:WaitForChild("PlayerGui")
+
+local LockState = {
+    enabled = (getrawmetatable and setreadonly and newcclosure) ~= nil,
+    protected = {}, bypass = false,
+    props = { Position=true, Size=true, AnchorPoint=true, Parent=true,
+        Visible=true, BackgroundTransparency=true, Enabled=true,
+        DisplayOrder=true, Active=true, ZIndex=true, Health=true },
+}
+if LockState.enabled then
+    local ok = pcall(function()
+        local mt = getrawmetatable(game)
+        local oldNewIndex = mt.__newindex
+        setreadonly(mt, false)
+        mt.__newindex = newcclosure(function(self, key, value)
+            if LockState.bypass == false and LockState.props[key]
+               and type(self) == "userdata" and LockState.protected[self] then return end
+            return oldNewIndex(self, key, value)
+        end)
+        setreadonly(mt, true)
+    end)
+    if not ok then LockState.enabled = false end
+end
+local function protectInstance(inst) if inst and LockState.enabled then LockState.protected[inst] = true end end
+local function safeWrite(inst, prop, value)
+    if LockState.enabled then
+        LockState.bypass = true; inst[prop] = value; LockState.bypass = false
+    else inst[prop] = value end
+end
+
+local uiParent = (gethui and gethui()) or PlayerGui
+for _, n in ipairs({"BabisUIKit","BabisUIKitNotif","BabisIntro"}) do
+    local old = uiParent:FindFirstChild(n); if old then old:Destroy() end
+    local oldPg = PlayerGui:FindFirstChild(n); if oldPg then oldPg:Destroy() end
+end
+
+local CONFIG = {
+    appName = "Babis | SENA HUB",
+    version = "v2.0.0",
+    edition = "Steal An Egg Edition",
+    discordInvite = "https://discord.gg/senahub",
+    colors = {
+        windowBg=Color3.fromRGB(8,10,14), headerTint=Color3.fromRGB(8,10,14), divider=Color3.fromRGB(65,150,245),
+        accent=Color3.fromRGB(90,165,255), accentSoft=Color3.fromRGB(160,210,255), accentDark=Color3.fromRGB(40,90,160),
+        gold=Color3.fromRGB(255, 200, 60), goldSoft=Color3.fromRGB(255, 225, 140), goldDeep=Color3.fromRGB(190, 140, 30),
+        navBg=Color3.fromRGB(18,18,19), navBorder=Color3.fromRGB(90,88,92), navIcon=Color3.fromRGB(52,61,69),
+        navIconActive=Color3.fromRGB(160,210,255), navActiveBrd=Color3.fromRGB(160,210,255),
+        cardBg=Color3.fromRGB(16,16,20), cardBorder=Color3.fromRGB(56,55,62),
+        toggleOff=Color3.fromRGB(38,38,44), toggleOn=Color3.fromRGB(90,165,255),
+        textPrimary=Color3.fromRGB(240,240,248), textDesc=Color3.fromRGB(150,148,168), textMuted=Color3.fromRGB(130,130,150),
+        closeHover=Color3.fromRGB(220,70,90), handIdle=Color3.fromRGB(240,245,255), handHover=Color3.fromRGB(255,255,255),
+        cfgIcon=Color3.fromRGB(170,120,255), cfgBtnBg=Color3.fromRGB(24,24,28), cfgBtnBorder=Color3.fromRGB(48,48,56),
+        bellBg=Color3.fromRGB(30,38,48),
+    },
+    sizes = {
+        windowWidth=470, windowHeight=720, windowRadius=22, headerHeight=82,
+        navHeight=78, navBtnSize=60, navBtnRadius=14, navGap=6, navPadX=12,
+        contentPadX=14, scrollPadL=6, scrollPadR=8, iconSize=40,
+        cardRadius=16, cardPadX=16, cardGap=12,
+        toggleCardHeight=140, sliderCardHeight=160, inputCardHeight=148, dropdownCardHeight=160,
+        toggleW=72, toggleH=38, toggleKnob=30, toggleRight=22,
+        controlW=110, controlH=44, controlRight=22, handIconSize=82, handIconY=20,
+        cfgHeight=516,
+    },
+    fonts = { appName=Enum.Font.GothamBold, version=Enum.Font.Gotham, intro=Enum.Font.Code },
+    textSizes = {
+        appName=22, version=15, intro=20, cardTitle=20, cardDesc=14,
+        cfgTitle=22, cfgLabel=17, cfgBtn=17, cfgHint=16, cfgInput=17,
+        aboutTitle=30, aboutDesc=16, discordTitle=28, discordSub=18,
+    },
+    anim = { fast=0.14, normal=0.20, slow=0.32, easing=Enum.EasingStyle.Quint, dir=Enum.EasingDirection.Out },
+    tabs = {
+        { id="main",     name="Main",     iconId=7733960981,     boost=6 },
+        { id="auto",     name="Auto",     iconId=7733774602,     boost=0 },
+        { id="events",   name="Events",   iconId=10723387563,    boost=0 },
+        { id="player",   name="Player",   iconId=92187976272467, boost=46 },
+        { id="misc",     name="Misc",     iconId=7734053495,     boost=0 },
+    },
+    defaultTab = "main",
+    handIconId="rbxassetid://88060480140568", cfgIconId="rbxassetid://10709791036",
+    infoIconId="rbxassetid://7733964719", discordIconId="rbxassetid://100770414662869",
+    bellIconId="rbxassetid://7072706001", notifySoundId="rbxassetid://5153734608",
+    notifySoundVol=0.5, introImageId="rbxassetid://119251117614023",
+    introDuration=4.0, introImgW=156, introImgH=139,
+    cfgFolder="Babis/configs", cfgExt=".json", autoloadFile="Babis/autoload.txt",
+    positionFile="Babis/position.txt",
+}
+
+local function corner(parent, r)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r); c.Parent = parent; return c
+end
+local function stroke(parent, color, thickness, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color=color; s.Thickness=thickness or 1; s.Transparency=transparency or 0
+    s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Parent=parent; return s
+end
+local function tween(obj, props, dur, style, dir)
+    local info = TweenInfo.new(dur or CONFIG.anim.normal, style or CONFIG.anim.easing, dir or CONFIG.anim.dir)
+    local t = TweenService:Create(obj, info, props); t:Play(); return t
+end
+local function popTween(obj, props, dur)
+    local info = TweenInfo.new(dur or 0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    local t = TweenService:Create(obj, info, props); t:Play(); return t
+end
+local function safeCall(fn, ...)
+    if type(fn) ~= "function" then return false end
+    local ok, res = pcall(fn, ...); if ok then return res end; return nil
+end
+local function ensureBabisFolder()
+    if not safeCall(isfolder, "Babis") then safeCall(makefolder, "Babis") end
+end
+local function savePosition(pos)
+    if not pos then return end
+    ensureBabisFolder()
+    local data = { x = pos.X.Scale, y = pos.Y.Scale, xo = pos.X.Offset, yo = pos.Y.Offset }
+    local ok, encoded = pcall(function() return HttpService:JSONEncode(data) end)
+    if not ok or type(encoded) ~= "string" then return end
+    safeCall(writefile, CONFIG.positionFile, encoded)
+end
+local function loadPosition()
+    local content = safeCall(readfile, CONFIG.positionFile)
+    if type(content) ~= "string" or content == "" then return nil end
+    local ok, data = pcall(function() return HttpService:JSONDecode(content) end)
+    if not ok or type(data) ~= "table" then return nil end
+    return UDim2.new(tonumber(data.x) or 0.5, tonumber(data.xo) or 0,
+                     tonumber(data.y) or 0.5, tonumber(data.yo) or 0)
+end
+
+local ConfigSys = {}
+do
+    function ConfigSys.ensure()
+        if not safeCall(isfolder, "Babis") then safeCall(makefolder, "Babis") end
+        if not safeCall(isfolder, CONFIG.cfgFolder) then safeCall(makefolder, CONFIG.cfgFolder) end
+    end
+    function ConfigSys.list()
+        ConfigSys.ensure(); local out = {}
+        local files = safeCall(listfiles, CONFIG.cfgFolder)
+        if type(files) ~= "table" then return out end
+        for _, path in ipairs(files) do
+            local name = path:match("([^/\\]+)$") or path
+            name = name:gsub(CONFIG.cfgExt:gsub("%.", "%%."), "")
+            table.insert(out, name)
+        end
+        return out
+    end
+    function ConfigSys.save(name, data)
+        ConfigSys.ensure()
+        if type(name) ~= "string" or name == "" then return false, "invalid name" end
+        local path = CONFIG.cfgFolder .. "/" .. name .. CONFIG.cfgExt
+        local okEnc, resEnc = pcall(function() return HttpService:JSONEncode(data) end)
+        if not okEnc then return false, "encode failed" end
+        local ok = safeCall(writefile, path, resEnc)
+        if ok == nil then return false, "writefile failed" end
+        return true
+    end
+    function ConfigSys.load(name)
+        ConfigSys.ensure()
+        local path = CONFIG.cfgFolder .. "/" .. name .. CONFIG.cfgExt
+        local content = safeCall(readfile, path)
+        if type(content) ~= "string" then return nil end
+        local ok, data = pcall(function() return HttpService:JSONDecode(content) end)
+        if not ok then return nil end
+        return data
+    end
+    function ConfigSys.delete(name)
+        local path = CONFIG.cfgFolder .. "/" .. name .. CONFIG.cfgExt
+        return safeCall(delfile, path) ~= nil
+    end
+    function ConfigSys.getAutoload()
+        local content = safeCall(readfile, CONFIG.autoloadFile)
+        if type(content) == "string" and content ~= "" then return content end
+        return nil
+    end
+    function ConfigSys.setAutoload(name)
+        ConfigSys.ensure()
+        if name == nil or name == "" then safeCall(delfile, CONFIG.autoloadFile)
+        else safeCall(writefile, CONFIG.autoloadFile, name) end
+    end
+end
+
+local _babisNotifyRef = nil
+local SenaLibOverride = {
+    Notify = function(self, opts)
+        opts = opts or {}
+        if _babisNotifyRef then
+            _babisNotifyRef(opts.Title or "Sena Hub", opts.Content or "", opts.Duration or 2.5)
+        end
+    end,
+}
+_G.SenaLibOverride = SenaLibOverride
+if getgenv then getgenv().SenaLibOverride = SenaLibOverride end
+
+local function createNotifier()
+    local notifGui = Instance.new("ScreenGui")
+    notifGui.Name="BabisUIKitNotif"; notifGui.ResetOnSpawn=false; notifGui.IgnoreGuiInset=true
+    notifGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; notifGui.DisplayOrder=300
+    notifGui.Parent=uiParent
+    protectInstance(notifGui)
+    local sound = Instance.new("Sound")
+    sound.SoundId=CONFIG.notifySoundId; sound.Volume=CONFIG.notifySoundVol
+    sound.Parent=SoundService
+    local container = Instance.new("Frame")
+    container.BackgroundTransparency=1; container.Size=UDim2.new(0,320,0,0)
+    container.AutomaticSize=Enum.AutomaticSize.Y; container.AnchorPoint=Vector2.new(1,0)
+    container.Position=UDim2.new(1,-20,0,20); container.Parent=notifGui
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection=Enum.FillDirection.Vertical; layout.Padding=UDim.new(0,10)
+    layout.SortOrder=Enum.SortOrder.LayoutOrder; layout.VerticalAlignment=Enum.VerticalAlignment.Top
+    layout.HorizontalAlignment=Enum.HorizontalAlignment.Right; layout.Parent=container
+    local GOLD = CONFIG.colors.gold
+    local order = 0
+    local function dismiss(row)
+        if not row or not row.Parent then return end
+        if row:GetAttribute("Dismissing") then return end
+        row:SetAttribute("Dismissing", true)
+        local card = row:FindFirstChild("Card")
+        if card then
+            tween(card, {Position=UDim2.new(1,420,0,0), BackgroundTransparency=0.7}, 0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+            for _, d in ipairs(card:GetDescendants()) do
+                if d:IsA("TextLabel") then tween(d, {TextTransparency=1}, 0.28)
+                elseif d:IsA("ImageLabel") then tween(d, {ImageTransparency=1}, 0.28)
+                elseif d:IsA("Frame") then tween(d, {BackgroundTransparency=1}, 0.28)
+                elseif d:IsA("UIStroke") then tween(d, {Transparency=1}, 0.28) end
+            end
+        end
+        tween(row, {Size=UDim2.new(1, 0, 0, 0)}, 0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+        task.delay(0.38, function() if row and row.Parent then row:Destroy() end end)
+    end
+    local function notify(title, message, duration)
+        title=title or "Notification"; message=message or ""; duration=duration or 2.0
+        if sound.IsPlaying then sound:Stop() end
+        sound.TimePosition=0; sound:Play()
+        order = order + 1
+        local row = Instance.new("Frame")
+        row.Size=UDim2.new(1,0,0,76); row.BackgroundTransparency=1
+        row.ClipsDescendants=false; row.LayoutOrder=order; row.Parent=container
+        local card = Instance.new("Frame")
+        card.Name="Card"; card.Size=UDim2.new(1,0,1,0); card.Position=UDim2.new(1,380,0,0)
+        card.BackgroundColor3=Color3.fromRGB(18,20,26); card.BorderSizePixel=0; card.Parent=row
+        corner(card,12); stroke(card, Color3.fromRGB(56,55,62), 1.5, 0)
+        local bar = Instance.new("Frame")
+        bar.Size=UDim2.new(0,5,1,-22); bar.Position=UDim2.new(0,9,0,11)
+        bar.BackgroundColor3=GOLD; bar.BorderSizePixel=0; bar.Parent=card; corner(bar,3)
+        local bellBg = Instance.new("Frame")
+        bellBg.Size=UDim2.new(0,42,0,42); bellBg.Position=UDim2.new(0,20,0.5,-21)
+        bellBg.BackgroundColor3=CONFIG.colors.bellBg; bellBg.BorderSizePixel=0; bellBg.Parent=card
+        corner(bellBg,21); stroke(bellBg, GOLD, 1.2, 0.4)
+        local bell = Instance.new("ImageLabel")
+        bell.Size=UDim2.new(0,28,0,28); bell.Position=UDim2.new(0.5,-14,0.5,-14)
+        bell.BackgroundTransparency=1; bell.Image=CONFIG.bellIconId
+        bell.ImageColor3=GOLD; bell.ScaleType=Enum.ScaleType.Fit; bell.Parent=bellBg
+        local titleLbl = Instance.new("TextLabel")
+        titleLbl.BackgroundTransparency=1; titleLbl.Text=title
+        titleLbl.TextColor3=Color3.fromRGB(245,248,255); titleLbl.Font=Enum.Font.GothamBold
+        titleLbl.TextSize=16; titleLbl.TextXAlignment=Enum.TextXAlignment.Left
+        titleLbl.TextYAlignment=Enum.TextYAlignment.Top
+        titleLbl.Size=UDim2.new(1,-90,0,22); titleLbl.Position=UDim2.new(0,72,0,16)
+        titleLbl.Parent=card
+        local msgLbl = Instance.new("TextLabel")
+        msgLbl.BackgroundTransparency=1; msgLbl.Text=message
+        msgLbl.TextColor3=Color3.fromRGB(160,165,185); msgLbl.Font=Enum.Font.Gotham
+        msgLbl.TextSize=14; msgLbl.TextXAlignment=Enum.TextXAlignment.Left
+        msgLbl.TextYAlignment=Enum.TextYAlignment.Top; msgLbl.TextWrapped=true
+        msgLbl.Size=UDim2.new(1,-90,0,34); msgLbl.Position=UDim2.new(0,72,0,38)
+        msgLbl.Parent=card
+        tween(card, {Position=UDim2.new(0,0,0,0)}, 0.35)
+        task.spawn(function()
+            task.wait(0.4)
+            if not bell.Parent then return end
+            bell.Rotation=-12
+            tween(bell,{Rotation=12},0.10); task.wait(0.11)
+            if not bell.Parent then return end
+            tween(bell,{Rotation=-8},0.10); task.wait(0.11)
+            if not bell.Parent then return end
+            tween(bell,{Rotation=6},0.10); task.wait(0.11)
+            if not bell.Parent then return end
+            tween(bell,{Rotation=0},0.12)
+        end)
+        task.spawn(function() task.wait(duration); dismiss(row) end)
+        return row
+    end
+    return notify
+end
+
+local function showIntro(onComplete)
+    local introGui = Instance.new("ScreenGui")
+    introGui.Name="BabisIntro"; introGui.ResetOnSpawn=false; introGui.IgnoreGuiInset=true
+    introGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; introGui.DisplayOrder=200
+    introGui.Parent=uiParent
+    protectInstance(introGui)
+    local overlay = Instance.new("Frame")
+    overlay.Size=UDim2.new(1,0,1,0); overlay.BackgroundColor3=Color3.fromRGB(0,0,0)
+    overlay.BackgroundTransparency=1; overlay.BorderSizePixel=0; overlay.Parent=introGui
+    local center = Instance.new("Frame")
+    center.Size=UDim2.new(0,260,0,260); center.Position=UDim2.new(0.5,0,0.5,-30)
+    center.AnchorPoint=Vector2.new(0.5,0.5); center.BackgroundTransparency=1; center.Parent=overlay
+    local glow = Instance.new("Frame")
+    glow.Size=UDim2.new(0,220,0,220); glow.Position=UDim2.new(0.5,0,0.5,0)
+    glow.AnchorPoint=Vector2.new(0.5,0.5); glow.BackgroundColor3=CONFIG.colors.accent
+    glow.BackgroundTransparency=1; glow.BorderSizePixel=0; glow.Parent=center; corner(glow,110)
+    local image = Instance.new("ImageLabel")
+    image.Size=UDim2.new(0,CONFIG.introImgW,0,CONFIG.introImgH)
+    image.Position=UDim2.new(0.5,0,0.5,0); image.AnchorPoint=Vector2.new(0.5,0.5)
+    image.BackgroundTransparency=1; image.Image=CONFIG.introImageId
+    image.ImageTransparency=1; image.ScaleType=Enum.ScaleType.Fit; image.Parent=center
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Size=UDim2.new(1,0,0,30); subtitle.Position=UDim2.new(0.5,0,0.5,120)
+    subtitle.AnchorPoint=Vector2.new(0.5,0); subtitle.BackgroundTransparency=1
+    subtitle.Text="CONNECTING TO SERVER"; subtitle.TextColor3=Color3.fromRGB(225,230,245)
+    subtitle.TextTransparency=1; subtitle.Font=CONFIG.fonts.intro
+    subtitle.TextSize=CONFIG.textSizes.intro; subtitle.TextXAlignment=Enum.TextXAlignment.Center
+    subtitle.Parent=overlay
+    tween(overlay, {BackgroundTransparency=0.55}, 0.5)
+    tween(image, {ImageTransparency=0}, 0.5)
+    tween(glow, {BackgroundTransparency=0.88}, 0.6)
+    tween(subtitle, {TextTransparency=0}, 0.5)
+    local spinning = true
+    task.spawn(function()
+        while spinning do
+            local s = TweenService:Create(image, TweenInfo.new(1.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Rotation=image.Rotation+360})
+            s:Play(); s.Completed:Wait()
+            if not spinning then break end
+            task.wait(0.45)
+        end
+    end)
+    task.spawn(function()
+        local base="CONNECTING TO SERVER"; local n=0
+        while spinning do n=(n+1)%4; subtitle.Text=base..string.rep(".",n); task.wait(0.35) end
+    end)
+    task.delay(CONFIG.introDuration, function()
+        spinning = false
+        tween(overlay, {BackgroundTransparency=1}, 0.55)
+        tween(image, {ImageTransparency=1}, 0.5)
+        tween(glow, {BackgroundTransparency=1}, 0.5)
+        tween(subtitle, {TextTransparency=1}, 0.4)
+        task.wait(0.6)
+        introGui:Destroy()
+        if onComplete then onComplete() end
+    end)
+end
+
+-- ============================================================
+-- UI BUILDER — 5 abas (Main / Auto / Events / Player / Misc)
+-- ============================================================
+
 local function buildMainUI()
     local notify = createNotifier()
     _babisNotifyRef = notify
@@ -32140,7 +32498,7 @@ local function buildMainUI()
     local function buildKeybindCard()
         local card = Instance.new("Frame")
         card.Size=UDim2.new(1,0,0,110); card.BackgroundColor3=CONFIG.colors.cardBg
-        card.BorderSizePixel=0; card.LayoutOrder=0; card.Parent=scroll
+        card.BorderSizePixel=0; card.LayoutOrder=900; card.Parent=scroll
         corner(card, CONFIG.sizes.cardRadius); stroke(card, CONFIG.colors.cardBorder, 1.5, 0)
         local title = Instance.new("TextLabel")
         title.BackgroundTransparency=1; title.Text="Toggle Keybind"
@@ -32182,7 +32540,7 @@ local function buildMainUI()
     local function buildConfigCard()
         local card = Instance.new("Frame")
         card.Size=UDim2.new(1,0,0,CONFIG.sizes.cfgHeight); card.BackgroundColor3=CONFIG.colors.cardBg
-        card.BorderSizePixel=0; card.LayoutOrder=1; card.Parent=scroll
+        card.BorderSizePixel=0; card.LayoutOrder=901; card.Parent=scroll
         corner(card, CONFIG.sizes.cardRadius); stroke(card, CONFIG.colors.cardBorder, 1.5, 0)
         local headerLbl = Instance.new("TextLabel")
         headerLbl.Size=UDim2.new(1,-60,0,26); headerLbl.Position=UDim2.new(0,48,0,16)
@@ -32300,8 +32658,10 @@ local function buildMainUI()
     local function buildMainTab()
         clearContent()
         local Egg = getgenv().__SenaV4EggRuntime
+
         createToggleCard(1, "Auto Steal", "Rouba eggs que passam nos filtros e traz pra safe zone.", "auto_steal", false,
             function(v) SenaCfg.AutoSteal = v; if Egg and Egg.setEnabled then pcall(Egg.setEnabled, Egg, v) end end)
+
         createDropdownCard(2, "Steal Mode", "Fly = alta velocidade. Instant = low speed user.", "steal_mode",
             {"Fly", "Instant", "Zig-Zag"}, "Fly",
             function(v)
@@ -32309,27 +32669,33 @@ local function buildMainUI()
                 SenaCfg.StealMode = m
                 if Egg and Egg.setStealMode then pcall(Egg.setStealMode, Egg, m, false, v == "Zig-Zag") end
             end)
+
         createSliderCard(3, "Low Speed Multiplier", "1-10. Mais alto = mais rápido agarra.", "steal_hold", 1, 10, 5,
             function(v) SenaCfg.StealHoldSeconds = v end)
+
         createToggleCard(4, "Help Friend", "Dropa o egg antes da linha segura pra um amigo pegar.", "help_friend", false,
             function(v) SenaCfg.HelpFriend = v end)
+
         createToggleCard(5, "Aura Bat (God Mode)", "Bate automaticamente em quem chega perto.", "god_mode", true,
             function(v)
                 SenaCfg.GodMode = v
                 local God = getgenv().__SenaV4GodMode
                 if God and God.setEnabled then pcall(God.setEnabled, God, v) end
             end)
+
         createToggleCard(6, "Auto Index", "Também rouba eggs faltando no Pet Index.", "auto_index", false,
             function(v)
                 SenaCfg.AutoIndex = v
                 if Egg and Egg.setIndexObjective then pcall(Egg.setIndexObjective, Egg, v) end
             end)
+
         createToggleCard(7, "Anti Guard Knockback", "Cancela o knockback do guard da Forest.", "anti_guard_knock", true,
             function(v)
                 SenaCfg.AntiGuardKnockback = v
                 local AG = getgenv().__SenaV4AntiGuard
                 if AG and AG.setEnabled then pcall(AG.setEnabled, AG, v) end
             end)
+
         createInputCard(8, "Filter By Value (min $/s)", "Valor mínimo em money/s. Aceita k/m/b.", "filter_value", "e.g. 500k", "",
             function(v)
                 local lower = string.lower(tostring(v or "")):gsub("[%s,]", "")
@@ -32341,12 +32707,14 @@ local function buildMainUI()
                 SenaCfg.StealMinValue = n
                 if Egg and Egg.setMinValuePerSec then pcall(Egg.setMinValuePerSec, Egg, n) end
             end)
+
         createInputCard(9, "Filter By Weight (kg)", "Peso mínimo em kg. 0 = sem filtro.", "filter_weight", "e.g. 12000", "",
             function(v)
                 local n = tonumber(tostring(v or ""):gsub("[^%d%.]", "")) or 0
                 SenaCfg.StealMinWeight = n
                 if Egg and Egg.setMinWeightKg then pcall(Egg.setMinWeightKg, Egg, n) end
             end)
+
         createDropdownCard(10, "Steal Priority", "Qual egg pegar primeiro.", "steal_priority",
             {"Rarity", "Highest Value", "Heaviest"}, "Rarity",
             function(v)
@@ -32356,21 +32724,26 @@ local function buildMainUI()
                     if Egg.setHeaviestFirst then pcall(Egg.setHeaviestFirst, Egg, v == "Heaviest") end
                 end
             end)
+
         createToggleCard(11, "Egg ESP", "Marca cada egg do mapa com um label.", "egg_esp", false,
             function(v)
                 SenaCfg.EggESP = v
                 if Egg and Egg.setEggEsp then pcall(Egg.setEggEsp, Egg, v) end
             end)
+
         createToggleCard(12, "Backpack Value/s", "Mostra rendimento/s dos eggs na mochila.", "backpack_rates", false,
             function(v)
                 SenaCfg.BackpackRateEsp = v
                 local Roam = getgenv().__SenaV4Roaming
                 if Roam and Roam.setBackpackRates then pcall(Roam.setBackpackRates, Roam, v) end
             end)
+
         createToggleCard(13, "Steal Webhook", "Posta embed no Discord quando bankar egg.", "webhook_on", false,
             function(v) SenaCfg.WebhookEnabled = v end)
+
         createInputCard(14, "Webhook URL", "URL do webhook.", "webhook_url", "https://discord.com/api/webhooks/...", "",
             function(v) SenaCfg.WebhookURL = tostring(v or "") end)
+
         createButtonCard(15, "Test Webhook", "Envia um embed de teste.", function()
             local W = getgenv().__SenaV4Webhook
             if W and W.test then pcall(W.test) end
@@ -32558,7 +32931,7 @@ local function buildMainUI()
             screenGui:Destroy()
         end)
 
-        -- Keybind + Config entram no fim da Misc agora
+        -- Keybind + Config agora no fim da Misc
         buildKeybindCard()
         buildConfigCard()
     end
